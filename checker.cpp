@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <unistd.h>
 #include <vector>
 #include <filesystem>
@@ -162,28 +164,33 @@ std::vector<Test> getTests(const Path& path) {
 // Parameters: path to python code, path to folder with tests
 // Each test is two files with the same name but different extension: in for input and out for output
 int main(int argc, char **argv) {
-    /*
     const std::string testsDirectory = argv[1];
-    const auto files = readTestsDirectory(testsDirectory);
-    std::cout << "Read files from " << testsDirectory << std::endl;
-    std::cout << "Total count: " << files.size() << std::endl;
-    for (const auto & file : files)
-        std::cout << "\tFile: " << getFileName(file) << " " << getFileNameWithoutExtension(file) << "\n";
-
-    const auto tests = getTests(testsDirectory);
-    std::cout << "Total found tests: " << tests.size() << std::endl;
-    for (const auto & test : tests)
-        std::cout << "\tTest " << getFileNameWithoutExtension(test.inputData) << "\n";
-
-    const auto result = execute("./echo", "watafak_mazafak");
-    std::cout << "Result: " << result << std::endl;
-*/
+    const std::string pythonCode = argv[2];
     const Path pythonExecutable = execute("which", "python3", "");
-    std::cout << "'" << pythonExecutable << "'" << std::endl;
-    // const Path pythonExecutable = execute_and_read("which python3");
-    // std::cout << pythonExecutable << std::endl;
-    const auto result = execute(pythonExecutable, "/home/knovikau/Documents/Program/cpp/checker/echo.py", "");
-    std::cout << "Res: " << result << std::endl;
-    // std::cout << execute(pythonExecutable, "", "/home/knovikau/Documents/Program/cpp/checker/echo.py");
+    std::cout << "Using Python from: " << pythonExecutable << std::endl;
+    std::cout << "Reading filese from " << testsDirectory << std::endl;
+    const auto files = readTestsDirectory(testsDirectory);
+    std::cout << "Total test files: " << files.size() << std::endl;
+    const auto tests = getTests(testsDirectory);
+    std::cout << "Total tests: " << tests.size() << std::endl;
+
+    for (const auto test : tests) {
+        const auto testName = getFileNameWithoutExtension(test.inputData);
+        std::cout << "Running test " << testName << ": ";
+
+        std::ifstream inputData(test.inputData);
+        std::ifstream outputData(test.outputData);
+
+        std::stringstream inputBuffer;
+        std::stringstream outputBuffer;
+        inputBuffer << inputData.rdbuf();
+        outputBuffer << outputData.rdbuf();
+
+        std::string result = execute(pythonExecutable, pythonCode, inputBuffer.str());
+        if (result == outputBuffer.str())
+            std::cout << "OK!" << std::endl;
+        else
+            std::cout << "FAILED! Expected " << outputBuffer.str() << ", but found " << result << std::endl;
+    }
     return 0;
 }
