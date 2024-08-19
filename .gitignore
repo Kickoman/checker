@@ -61,5 +61,5 @@ build/
 .vscode
 
 # Test examples
-test_examples/*.in
-test_examples/*.out
+example/test_examples/*.in
+example/test_examples/*.out
