@@ -1,4 +1,5 @@
 #include "kexec.h"
+#include "types.h"
 
 // For close and pipes
 // TODO: Add windows-compatible implementation
@@ -8,6 +9,7 @@
 #include <sys/wait.h>
 
 #include <fmt/core.h>
+#include <sstream>
 
 namespace Kexec {
 
@@ -46,6 +48,16 @@ private:
     bool pipe_read_open = false;
 };
 
+std::vector<StringType> split(const StringType& s, const StringType::value_type delimiter) {
+    std::vector<StringType> tokens;
+    std::stringstream stream(s);
+    std::string buffer;
+    while (std::getline(stream, buffer, delimiter)) {
+        tokens.push_back(buffer);
+    }
+    return tokens;
+}
+
 
 StringType execute(const StringType& command, const StringType& arguments, const StringType& input) {
     Pipes pin, pout;
@@ -60,9 +72,21 @@ StringType execute(const StringType& command, const StringType& arguments, const
         pin.closeWrite();
         pout.closeRead();
 
+        // TODO: Fix this later, when all consumers are ready for new format
+        const auto splittedArguments = split(arguments, ' ');
+
+        std::vector<const char*> carguments(splittedArguments.size() + 2);
+        carguments[0] = command.c_str();
+        for (size_t i = 0; i < splittedArguments.size(); ++i) {
+            carguments[i + 1] = splittedArguments[i].c_str();
+        }
+        carguments[splittedArguments.size() + 1] = nullptr;
+
         dup2(pin.pipe_read, 0);
         dup2(pout.pipe_write, 1);
-        execlp(command.c_str(), command.c_str(), (!arguments.empty() ? arguments.c_str() : nullptr), nullptr);
+
+        // TODO: DEAL WITH CONSTS WHEN FIXED ISSUE ABOVE
+        execvp(command.c_str(), const_cast<char* const*>(carguments.data()));
         throw Kexeption(fmt::format(
             "Failed to execlp: {}", strerror(errno)
         ));
