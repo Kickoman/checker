@@ -63,3 +63,6 @@ build/
 # Test examples
 example/test_examples/*.in
 example/test_examples/*.out
+
+.vs
+CMakeSettings.json

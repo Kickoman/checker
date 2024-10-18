@@ -42,8 +42,8 @@ const std::string OUTPUT_FILE_SUFFIX = ".out";
 std::vector<Path> readTestsDirectory(const Path& path) {
     std::vector<Path> result;
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
-        if (endsWith(entry.path(), INPUT_FILE_SUFFIX) || endsWith(entry.path(), OUTPUT_FILE_SUFFIX)) {
-            result.push_back(entry.path());
+        if (endsWith(entry.path().string(), INPUT_FILE_SUFFIX) || endsWith(entry.path().string(), OUTPUT_FILE_SUFFIX)) {
+            result.push_back(entry.path().string());
         }
     }
     return result;
@@ -82,15 +82,31 @@ std::vector<Test> getTests(const Path& path) {
     return tests;
 }
 
+Path resolvePythonExecutable() {
+#ifdef _WIN32
+    const auto result = Kexec::execute("where.exe", "python");
+    std::stringstream strean(result);
+    std::string buffer;
+    std::getline(strean, buffer, '\r');
+    return buffer;
+#else
+    return Kexec::execute("which", "python3");
+#endif
+}
+
 
 // Parameters: path to python code, path to folder with tests
 // Each test is two files with the same name but different extension: in for input and out for output
 int main(int argc, char **argv) {
+    if (argc < 3) {
+        std::cerr << "Too few arguments" << std::endl;
+        return 1;
+    }
     const std::string testsDirectory = argv[1];
     const std::string pythonCode = argv[2];
-    const Path pythonExecutable = Kexec::execute("which", "python3", "");
+    const Path pythonExecutable = resolvePythonExecutable();
     std::cout << "Using Python from: " << pythonExecutable << std::endl;
-    std::cout << "Reading filese from " << testsDirectory << std::endl;
+    std::cout << "Reading files from " << testsDirectory << std::endl;
     const auto files = readTestsDirectory(testsDirectory);
     std::cout << "Total test files: " << files.size() << std::endl;
     const auto tests = getTests(testsDirectory);
