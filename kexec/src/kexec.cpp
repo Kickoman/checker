@@ -1,9 +1,8 @@
 #include "kexec.h"
 #include "types.h"
 
-// TODO: Add windows-compatible implementation
-// For close and pipes
 #ifdef linux
+// For close and pipes
 #include <unistd.h>
 // For wait
 #include <sys/wait.h>
@@ -12,12 +11,9 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-// TODO: Add windows-compatible implementation
 
 #include <fmt/core.h>
 #include <sstream>
-
-#include <iostream>
 #include <cassert>
 
 namespace Kexec {
@@ -112,7 +108,12 @@ namespace Kexec {
         pin.closeRead();
         pout.closeWrite();
         if (!input.empty()) {
-            write(pin.pipe_write, input.c_str(), input.size());
+            if (write(pin.pipe_write, input.c_str(), input.size()) == -1) {
+                throw KException(fmt::format(
+                    "Failed to write {} bytes aka '{}' to stdin",
+                    input.size(), input
+                ));
+            }
         }
         pin.closeWrite();
 
@@ -198,7 +199,7 @@ StringType execute(const StringType& command, const StringType& arguments, const
         TRUE,                           // Set handle inheritance to TRUE
         0,                              // No creation flags
         nullptr,                        // Use parent's environment block
-        nullptr,                        // Use parent's starting directory 
+        nullptr,                        // Use parent's starting directory
         &si,                            // Pointer to STARTUPINFO structure
         &pi                             // Pointer to PROCESS_INFORMATION structure
     )) {
